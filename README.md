@@ -91,13 +91,15 @@ Wanna fingerprint WAFs? Lets see how.
                 <li><b>Detection Methodology:</b></li>
                 <ul>
                     <li>Returns status code <code>493</code> upon unusual requests.</li>
-                    <li>On viewing source-code of error page, you will find reference to <code>wzws-waf-cgi/</code> directory.</li>
-                    <li>Blocked response page source contains:
+                    <li>Blockpage may contain reference to <code>wzws-waf-cgi/</code> directory.</li>
+                    <li>Blocked response page source may contain:
                     <ul>
                         <li>Reference to <code>wangshan.360.cn</code> URL.</li>
                         <li><code>Sorry! Your access has been intercepted because your links may threaten website security.</code> text snippet.</li>
                     </ul>
-                    <li>Response headers contain <code>X-Powered-By-360WZB</code> Header.</li>
+                    <li>Response headers may contain <code>X-Powered-By-360WZB</code> header.</li>
+                    <li>Blocked response headers contain unique header <code>WZWS-Ray</code>.</li>
+                    <li><code>Server</code> header may contain value <code>qianxin-waf</code>.</li>
                 </ul>
             </ul>
         </td>
@@ -1384,6 +1386,8 @@ Wanna fingerprint WAFs? Lets see how.
                 <li><b>Detection Methodology:</b></li>
                 <ul>
                     <li>Response page contains the following text snippet:<br> <code>Unauthorized Activity Has Been Detected.</code> and <code>Case Number</code></li>
+                    <li>Blocked response page has reference to <code>radwarealerting@{site.tld}</code> email.</li>
+                    <li>Blocked response page has title set to <code>Unauthorized Request Blocked</code>.</li>
                     <li>Response headers may contain <code>X-SL-CompState</code> header field name.</li>
                 </ul>
             </ul>
@@ -2931,6 +2935,10 @@ Before anything else, you should hone up skills from [Google Dorks Cheat Sheet](
 - [SQLi Bypass](https://github.com/enkaskal/aws-waf-sqli-bypass-PoC) by [@enkaskal](https://twitter.com/enkaskal)
 ```
 "; select * from TARGET_TABLE --
+```
+- [XSS Bypass](https://github.com/kmkz/Pentesting/blob/master/Pentest-Cheat-Sheet#L285) by [@kmkz](https://twitter.com/kmkz_security)
+```
+<script>eval(atob(decodeURIComponent("payload")))//
 ```
 
 ### Barracuda 
